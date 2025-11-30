@@ -11,7 +11,7 @@
 - [x] `assets/css/style.css` - Stylesheet global lengkap dengan responsive design
 
 ### ✅ Data
-- [x] `data/dataBahanAjar_tgs3.json` - Sumber data RESMI untuk Tugas 3
+- [x] `data/dataBahanAjar_tgs3.json` - data dari dosen/mentor untuk Tugas 3
 
 ### ✅ JavaScript Core
 - [x] `js/app.js` - Vue root instance dengan tab state management
