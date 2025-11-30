@@ -317,8 +317,8 @@ statusMap: {
 ## 📌 Catatan Implementasi
 
 ### ✅ Yang Sudah Sesuai Requirement
-- ✅ Data dari `dataBahanAjar_tgs3.json` (TIDAK ada referensi ke Tugas 2)
-- ✅ Struktur folder sesuai spesifikasi
+- ✅ Data dari `dataBahanAjar_tgs3.json` 
+- ✅ Struktur folder sesuai intruksi soal
 - ✅ Component-based architecture
 - ✅ Semua Vue features terpakai (directives, computed, methods, watchers, filters)
 - ✅ Filter dependent (kategori by UPBJJ)
