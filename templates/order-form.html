@@ -1,0 +1,160 @@
+<script type="text/x-template" id="tpl-order">
+  <div class="order-form-container">
+    <h2>➕ Form Pemesanan Delivery Order</h2>
+    
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <p>Memuat data...</p>
+    </div>
+    
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <p>{{ error }}</p>
+      <button class="btn btn-primary" @click="loadData">Coba Lagi</button>
+    </div>
+    
+    <!-- Content -->
+    <div v-else>
+      <!-- Success Message -->
+      <div v-if="showSuccess" class="alert alert-success">
+        <button class="alert-close" @click="closeSuccess">&times;</button>
+        <h4>✅ Pesanan Berhasil Dibuat!</h4>
+        <p>Nomor DO: <strong>{{ savedDO.nomorDO }}</strong></p>
+        <p>Atas nama: <strong>{{ savedDO.nama }}</strong> ({{ savedDO.nim }})</p>
+        <p>Total: <strong>{{ formatCurrency(savedDO.total) }}</strong></p>
+      </div>
+      
+      <!-- Form -->
+      <div class="form-section">
+        <form @submit.prevent="submitForm" class="order-form">
+          <!-- Nomor DO (Auto-generated, Read-only) -->
+          <div class="form-group">
+            <label>Nomor DO:</label>
+            <input 
+              type="text" 
+              v-model="form.nomorDO" 
+              class="form-control" 
+              readonly
+              title="Nomor DO dibuat otomatis">
+            <small class="form-hint">Nomor DO dibuat otomatis oleh sistem</small>
+          </div>
+          
+          <!-- NIM -->
+          <div class="form-group">
+            <label>NIM: *</label>
+            <input 
+              type="text" 
+              v-model="form.nim" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.nim }"
+              placeholder="Contoh: 123456789"
+              maxlength="9">
+            <span v-if="validationErrors.nim" class="error-message">
+              {{ validationErrors.nim }}
+            </span>
+            <small class="form-hint">9 digit angka</small>
+          </div>
+          
+          <!-- Nama -->
+          <div class="form-group">
+            <label>Nama Lengkap: *</label>
+            <input 
+              type="text" 
+              v-model="form.nama" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.nama }"
+              placeholder="Contoh: Rina Wulandari">
+            <span v-if="validationErrors.nama" class="error-message">
+              {{ validationErrors.nama }}
+            </span>
+          </div>
+          
+          <!-- Ekspedisi -->
+          <div class="form-group">
+            <label>Ekspedisi: *</label>
+            <select 
+              v-model="form.ekspedisi" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.ekspedisi }">
+              <option value="">-- Pilih Ekspedisi --</option>
+              <option 
+                v-for="ekspedisi in pengirimanList" 
+                :key="ekspedisi.kode" 
+                :value="ekspedisi.kode">
+                {{ ekspedisi.nama }}
+              </option>
+            </select>
+            <span v-if="validationErrors.ekspedisi" class="error-message">
+              {{ validationErrors.ekspedisi }}
+            </span>
+          </div>
+          
+          <!-- Paket -->
+          <div class="form-group">
+            <label>Paket: *</label>
+            <select 
+              v-model="form.paket" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.paket }">
+              <option value="">-- Pilih Paket --</option>
+              <option 
+                v-for="paket in paketList" 
+                :key="paket.kode" 
+                :value="paket.kode">
+                {{ paket.nama }} - {{ formatCurrency(paket.harga) }}
+              </option>
+            </select>
+            <span v-if="validationErrors.paket" class="error-message">
+              {{ validationErrors.paket }}
+            </span>
+          </div>
+          
+          <!-- Info Paket Terpilih -->
+          <div v-if="selectedPaket" class="paket-info">
+            <h4>📦 Detail Paket: {{ selectedPaket.nama }}</h4>
+            <ul>
+              <li v-for="(item, index) in selectedPaket.isi" :key="index">
+                {{ item }}
+              </li>
+            </ul>
+            <p class="paket-price">Harga: {{ formatCurrency(selectedPaket.harga) }}</p>
+          </div>
+          
+          <!-- Tanggal Kirim -->
+          <div class="form-group">
+            <label>Tanggal Kirim: *</label>
+            <input 
+              type="date" 
+              v-model="form.tanggalKirim" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.tanggalKirim }">
+            <span v-if="validationErrors.tanggalKirim" class="error-message">
+              {{ validationErrors.tanggalKirim }}
+            </span>
+          </div>
+          
+          <!-- Total (Computed from Paket) -->
+          <div class="form-group">
+            <label>Total:</label>
+            <div class="total-display">
+              {{ formatCurrency(form.total) }}
+            </div>
+            <small class="form-hint">Total dihitung otomatis dari paket yang dipilih</small>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">
+              💾 Simpan Pesanan
+            </button>
+            <button type="button" class="btn btn-secondary" @click="resetForm">
+              🔄 Reset Form
+            </button>
+          </div>
+          
+          <p class="form-note">* Field wajib diisi</p>
+        </form>
+      </div>
+    </div>
+  </div>
+</script>

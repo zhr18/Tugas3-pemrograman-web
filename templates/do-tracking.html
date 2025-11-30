@@ -1,0 +1,141 @@
+<script type="text/x-template" id="tpl-tracking">
+  <div class="tracking-container">
+    <h2>🚚 Tracking Delivery Order</h2>
+    
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <p>Memuat data tracking...</p>
+    </div>
+    
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <p>{{ error }}</p>
+      <button class="btn btn-primary" @click="loadData">Coba Lagi</button>
+    </div>
+    
+    <!-- Content -->
+    <div v-else>
+      <!-- Search Section -->
+      <div class="search-section">
+        <h3>🔍 Cari Delivery Order</h3>
+        
+        <div class="search-form">
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            @keyup.enter="searchDO" 
+            @keyup.esc="resetSearch"
+            class="form-control search-input" 
+            placeholder="Masukkan nomor DO (contoh: DO2025-0001)">
+          
+          <button class="btn btn-primary" @click="searchDO">
+            Cari
+          </button>
+          
+          <button 
+            class="btn btn-secondary" 
+            @click="resetSearch"
+            v-if="selectedDO || searchError">
+            Reset
+          </button>
+        </div>
+        
+        <!-- Search Error -->
+        <div v-if="searchError" class="alert alert-error">
+          {{ searchError }}
+        </div>
+      </div>
+      
+      <!-- DO Detail -->
+      <div v-if="selectedDO" class="do-detail">
+        <div class="do-header">
+          <h3>Detail Delivery Order</h3>
+          <span class="do-number">{{ selectedDO.nomorDO }}</span>
+        </div>
+        
+        <div class="do-info-grid">
+          <div class="info-item">
+            <label>NIM:</label>
+            <span>{{ selectedDO.nim }}</span>
+          </div>
+          
+          <div class="info-item">
+            <label>Nama:</label>
+            <span>{{ selectedDO.nama }}</span>
+          </div>
+          
+          <div class="info-item">
+            <label>Status:</label>
+            <span class="badge" :class="'badge-' + selectedDO.status.toLowerCase().replace(/ /g, '-')">
+              {{ selectedDO.status }}
+            </span>
+          </div>
+          
+          <div class="info-item">
+            <label>Ekspedisi:</label>
+            <span>{{ selectedDO.ekspedisi }}</span>
+          </div>
+          
+          <div class="info-item">
+            <label>Tanggal Kirim:</label>
+            <span>{{ formatDate(selectedDO.tanggalKirim) }}</span>
+          </div>
+          
+          <div class="info-item">
+            <label>Paket:</label>
+            <span>{{ selectedDO.paket }}</span>
+          </div>
+          
+          <div class="info-item">
+            <label>Total:</label>
+            <span class="total-price">{{ formatCurrency(selectedDO.total) }}</span>
+          </div>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div class="progress-section">
+          <h4>Progress Pengiriman</h4>
+          <div class="progress-bar-container">
+            <div 
+              class="progress-bar" 
+              :class="progressClass"
+              :style="{ width: progressPercentage + '%' }">
+              <span class="progress-text">{{ progressPercentage }}%</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Timeline Perjalanan -->
+        <div class="timeline-section">
+          <h4>📍 Timeline Perjalanan</h4>
+          
+          <div v-if="!selectedDO.perjalanan || selectedDO.perjalanan.length === 0" class="no-timeline">
+            <p>Belum ada data perjalanan</p>
+          </div>
+          
+          <div v-else class="timeline">
+            <div 
+              v-for="(event, index) in selectedDO.perjalanan" 
+              :key="index"
+              class="timeline-item"
+              :class="{ 'timeline-latest': index === selectedDO.perjalanan.length - 1 }">
+              <div class="timeline-marker"></div>
+              <div class="timeline-content">
+                <div class="timeline-time">{{ event.waktu }}</div>
+                <div class="timeline-description">{{ event.keterangan }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Info Awal -->
+      <div v-else class="info-section">
+        <div class="info-box">
+          <p>ℹ️ Masukkan nomor DO untuk melihat detail tracking pengiriman</p>
+          <p class="info-example">Contoh: DO2025-0001, DO2025-0002</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</script>

@@ -1,0 +1,297 @@
+<script type="text/x-template" id="tpl-stock">
+  <div class="stock-table-container">
+    <h2>📦 Stok Bahan Ajar</h2>
+    
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <p>Memuat data stok...</p>
+    </div>
+    
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <p>{{ error }}</p>
+      <button class="btn btn-primary" @click="loadData">Coba Lagi</button>
+    </div>
+    
+    <!-- Content -->
+    <div v-else>
+      <!-- Filter Section -->
+      <div class="filter-section">
+        <h3>🔍 Filter & Sort</h3>
+        
+        <div class="filter-grid">
+          <!-- Filter UT-Daerah -->
+          <div class="filter-item">
+            <label for="filter-upbjj">UT-Daerah:</label>
+            <select id="filter-upbjj" v-model="filterUpbjj" class="form-control">
+              <option value="">-- Semua UPBJJ --</option>
+              <option v-for="upbjj in upbjjList" :key="upbjj" :value="upbjj">
+                {{ upbjj }}
+              </option>
+            </select>
+          </div>
+          
+          <!-- Filter Kategori (dependent) -->
+          <div class="filter-item">
+            <label for="filter-kategori">Kategori:</label>
+            <select 
+              id="filter-kategori" 
+              v-model="filterKategori" 
+              class="form-control"
+              :disabled="!filterUpbjj">
+              <option value="">-- Semua Kategori --</option>
+              <option v-for="kategori in availableKategori" :key="kategori" :value="kategori">
+                {{ kategori }}
+              </option>
+            </select>
+            <small v-if="!filterUpbjj" class="form-hint">Pilih UT-Daerah terlebih dahulu</small>
+          </div>
+          
+          <!-- Filter Stok Kritis -->
+          <div class="filter-item checkbox-item">
+            <label>
+              <input type="checkbox" v-model="filterStokKritis">
+              Stok Menipis (Qty &lt; Safety)
+            </label>
+          </div>
+          
+          <!-- Filter Stok Kosong -->
+          <div class="filter-item checkbox-item">
+            <label>
+              <input type="checkbox" v-model="filterStokKosong">
+              Stok Kosong (Qty = 0)
+            </label>
+          </div>
+          
+          <!-- Reset Button -->
+          <div class="filter-item">
+            <button 
+              class="btn btn-secondary" 
+              @click="resetFilters"
+              :disabled="!hasActiveFilters">
+              🔄 Reset Filter
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Table Section -->
+      <div class="table-section">
+        <div class="table-header">
+          <h3>Data Stok</h3>
+          <p class="table-info">
+            Menampilkan {{ filteredAndSortedStok.length }} dari {{ stokList.length }} item
+          </p>
+          <div class="table-actions">
+            <button class="btn btn-primary" @click="openCreateModal">➕ Tambah</button>
+          </div>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th @click="toggleSort('kode')" class="sortable">
+                  Kode
+                  <span v-if="sortBy === 'kode'">
+                    {{ sortOrder === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </th>
+                <th @click="toggleSort('judul')" class="sortable">
+                  Judul
+                  <span v-if="sortBy === 'judul'">
+                    {{ sortOrder === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </th>
+                <th>Kategori</th>
+                <th>UT-Daerah</th>
+                <th>Lokasi Rak</th>
+                <th @click="toggleSort('harga')" class="sortable text-right">
+                  Harga
+                  <span v-if="sortBy === 'harga'">
+                    {{ sortOrder === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </th>
+                <th @click="toggleSort('qty')" class="sortable text-right">
+                  Qty
+                  <span v-if="sortBy === 'qty'">
+                    {{ sortOrder === 'asc' ? '▲' : '▼' }}
+                  </span>
+                </th>
+                <th class="text-right">Safety</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="filteredAndSortedStok.length === 0">
+                <td colspan="11" class="text-center">
+                  Tidak ada data yang sesuai dengan filter
+                </td>
+              </tr>
+              <tr v-for="(item, index) in filteredAndSortedStok" :key="item.kode">
+                <td>{{ index + 1 }}</td>
+                <td><strong>{{ item.kode }}</strong></td>
+                <td>{{ item.judul }}</td>
+                <td>{{ item.kategori }}</td>
+                <td>{{ item.upbjj }}</td>
+                <td>{{ item.lokasiRak }}</td>
+                <td class="text-right">{{ item.harga | currency }}</td>
+                <td class="text-right">{{ item.qty | qty }}</td>
+                <td class="text-right">{{ item.safety | qty }}</td>
+                <td>
+                  <div :title="plainCatatan(item.catatanHTML)">
+                    <status-badge 
+                      :qty="item.qty" 
+                      :safety="item.safety"
+                      :catatan="item.catatanHTML">
+                    </status-badge>
+                  </div>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-primary" @click="openEditModal(item)">
+                    ✏️ Edit
+                  </button>
+                  <button class="btn btn-sm btn-secondary" @click="deleteStok(item)">
+                    🗑️ Hapus
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal Edit Stok -->
+    <app-modal 
+      :show="showModal" 
+      title="✏️ Edit Stok Bahan Ajar"
+      size="large"
+      @close="closeModal">
+      <form @submit.prevent="saveEdit" class="edit-form" @keyup.enter="saveEdit">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Kode:</label>
+            <input type="text" v-model="editForm.kode" class="form-control" :disabled="!isCreate">
+          </div>
+          
+          <div class="form-group">
+            <label>Judul: *</label>
+            <input 
+              type="text" 
+              v-model="editForm.judul" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.judul }">
+            <span v-if="validationErrors.judul" class="error-message">
+              {{ validationErrors.judul }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Kategori: *</label>
+            <select 
+              v-model="editForm.kategori" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.kategori }">
+              <option value="">-- Pilih Kategori --</option>
+              <option v-for="kategori in kategoriList" :key="kategori" :value="kategori">
+                {{ kategori }}
+              </option>
+            </select>
+            <span v-if="validationErrors.kategori" class="error-message">
+              {{ validationErrors.kategori }}
+            </span>
+          </div>
+          
+          <div class="form-group">
+            <label>UT-Daerah: *</label>
+            <select 
+              v-model="editForm.upbjj" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.upbjj }">
+              <option value="">-- Pilih UT-Daerah --</option>
+              <option v-for="upbjj in upbjjList" :key="upbjj" :value="upbjj">
+                {{ upbjj }}
+              </option>
+            </select>
+            <span v-if="validationErrors.upbjj" class="error-message">
+              {{ validationErrors.upbjj }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Lokasi Rak: *</label>
+            <input 
+              type="text" 
+              v-model="editForm.lokasiRak" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.lokasiRak }">
+            <span v-if="validationErrors.lokasiRak" class="error-message">
+              {{ validationErrors.lokasiRak }}
+            </span>
+          </div>
+          
+          <div class="form-group">
+            <label>Harga: *</label>
+            <input 
+              type="number" 
+              v-model.number="editForm.harga" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.harga }">
+            <span v-if="validationErrors.harga" class="error-message">
+              {{ validationErrors.harga }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Qty: *</label>
+            <input 
+              type="number" 
+              v-model.number="editForm.qty" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.qty }">
+            <span v-if="validationErrors.qty" class="error-message">
+              {{ validationErrors.qty }}
+            </span>
+          </div>
+          
+          <div class="form-group">
+            <label>Safety Stock: *</label>
+            <input 
+              type="number" 
+              v-model.number="editForm.safety" 
+              class="form-control"
+              :class="{ 'is-invalid': validationErrors.safety }">
+            <span v-if="validationErrors.safety" class="error-message">
+              {{ validationErrors.safety }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label>Catatan HTML:</label>
+          <textarea 
+            v-model="editForm.catatanHTML" 
+            class="form-control" 
+            rows="3"
+            placeholder="Gunakan tag HTML seperti <em>, <strong>, <u>, dll.">
+          </textarea>
+          <small class="form-hint">Preview: <span v-html="editForm.catatanHTML"></span></small>
+        </div>
+      </form>
+      
+      <template v-slot:footer>
+        <button class="btn btn-secondary" @click="closeModal">Batal</button>
+        <button class="btn btn-primary" @click="saveEdit">💾 Simpan</button>
+      </template>
+    </app-modal>
+  </div>
+</script>
